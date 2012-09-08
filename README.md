@@ -7,6 +7,8 @@ This app is inspired by the feature-rich [django-moderation](https://github.com/
 Installation
 ------------
 
+Installation is very easy
+
 # `pip install -e "git@github.com:ilvar/django-moderation-queue.git#egg=django-moderation-queue"
 # Add `'moderation'` in `INSTALLED_APPS`
 # Inherit your admin sites from `moderation.admin.ModerationAdmin`
