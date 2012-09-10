@@ -2,6 +2,7 @@ import datetime
 from django.db import models
 from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
+from django.db.utils import IntegrityError
 
 from picklefield.fields import PickledObjectField
 
@@ -32,14 +33,17 @@ class Changeset(models.Model):
     object_diff = PickledObjectField(editable=False)
 
     def approve(self, user, reason):
-        self.apply_changes()
+        try:
+            self.apply_changes()
+        except IntegrityError, e:
+            print 'Error on chaangeset %s:' % self.pk, e
+        else:
+            self.moderation_status = MODERATION_STATUS_APPROVED
+            self.moderated_by = user
+            self.moderation_date = datetime.datetime.now()
+            self.moderation_reason = reason
 
-        self.moderation_status = MODERATION_STATUS_APPROVED
-        self.moderated_by = user
-        self.moderation_date = datetime.datetime.now()
-        self.moderation_reason = reason
-
-        self.save()
+            self.save()
 
     def reject(self, user, reason):
         self.moderation_status = MODERATION_STATUS_REJECTED
@@ -49,9 +53,21 @@ class Changeset(models.Model):
         self.save()
 
     def apply_changes(self):
+        from filebrowser.fields import FileBrowseField
+        from filebrowser.base import FileObject
+
         Model = self.content_type.model_class()
-        obj_fields = [f[0].name for f in Model()._meta.get_fields_with_model()]
-        update_params = dict([(k,v) for k,v in self.object_diff.items() if k in obj_fields])
+        obj_fields = dict([(f[0].name, f[0]) for f in Model()._meta.get_fields_with_model()])
+        update_params = {}
+        for k,v in self.object_diff.items():
+            field = obj_fields.get(k)
+            if not field:
+                continue
+
+            if isinstance(field, FileBrowseField):
+                v = FileObject(v, site=field.site)
+
+            update_params[k] = v
 
         if self.object_pk:
             update_qs = Model.objects.filter(pk=self.object_pk)
