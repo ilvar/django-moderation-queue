@@ -49,9 +49,12 @@ class Changeset(models.Model):
         self.save()
 
     def apply_changes(self):
+        Model = self.content_type.model_class()
+        obj_fields = [f[0].name for f in Model()._meta.get_fields_with_model()]
+        update_params = dict([(k,v) for k,v in self.object_diff.items() if k in obj_fields])
+
         if self.object_pk:
-            update_qs = self.content_type.model_class().objects.filter(pk=self.object_pk)
-            update_qs.update(**self.object_diff)
+            update_qs = Model.objects.filter(pk=self.object_pk)
+            update_qs.update(**update_params)
         else:
-            Model = self.content_type.model_class()
-            Model.objects.create(**self.object_diff)
+            Model.objects.create(**update_params)
