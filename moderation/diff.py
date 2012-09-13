@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from django.db.models.fields import FieldDoesNotExist
 
 import re
 import difflib
@@ -49,7 +50,10 @@ class ImageChange(BaseChange):
 
 def calculate_full_diff(obj, diff):
     for k,v in diff.items():
-        field = obj._meta.get_field(k)
+        try:
+            field = obj._meta.get_field(k)
+        except FieldDoesNotExist:
+            continue
         yield TextChange(field.verbose_name or k,
             field,
             (unicode(getattr(obj, k)), unicode(v)),

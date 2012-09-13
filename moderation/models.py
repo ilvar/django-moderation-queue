@@ -32,11 +32,23 @@ class Changeset(models.Model):
     changed_by = models.ForeignKey('auth.User', editable=False, null=True, related_name='changed_by_set')
     object_diff = PickledObjectField(editable=False)
 
+    def get_children(self):
+        changesets = Changeset.objects.filter(moderation_status=MODERATION_STATUS_PENDING)
+        children = []
+        for cs in changesets:
+            obj = cs.content_object
+            if not obj:
+                continue
+
+            for f in obj._meta.fields:
+                if getattr(obj, f.name, None) == self.content_object:
+                    yield cs
+
     def approve(self, user, reason):
         try:
             self.apply_changes()
         except IntegrityError, e:
-            print 'Error on chaangeset %s:' % self.pk, e
+            print 'Error on changeset %s:' % self.pk, e
         else:
             self.moderation_status = MODERATION_STATUS_APPROVED
             self.moderated_by = user
@@ -69,8 +81,19 @@ class Changeset(models.Model):
 
             update_params[k] = v
 
-        if self.object_pk:
-            update_qs = Model.objects.filter(pk=self.object_pk)
-            update_qs.update(**update_params)
-        else:
-            Model.objects.create(**update_params)
+        update_params.update(moderation_active=True)
+        update_qs = Model.all_objects.filter(pk=self.object_pk)
+        update_qs.update(**update_params)
+
+class ModeratedManager(models.Manager):
+    def get_query_set(self):
+        return super(ModeratedManager, self).get_query_set().filter(moderation_active=True)
+
+class ModeratedModel(models.Model):
+    moderation_active = models.BooleanField(editable=False, default=False)
+
+    objects = ModeratedManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        abstract = True

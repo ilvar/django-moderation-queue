@@ -10,7 +10,13 @@ class MockObject():
 class BaseModeratedObjectForm(forms.ModelForm):
     def save(self, request, commit=True, *args, **kwargs):
         changes = dict([(k, v) for k, v in self.cleaned_data.items() if k in self.changed_data])
-        if changes:
+        create = False
+
+        if not self.instance or not self.instance.pk:
+            self.instance = super(BaseModeratedObjectForm, self).save(commit=commit, *args, **kwargs)
+            create = True
+
+        if changes or create:
             ct = ContentType.objects.get_for_model(self.instance)
             Changeset.objects.create(
                 content_type = ct,
@@ -19,8 +25,14 @@ class BaseModeratedObjectForm(forms.ModelForm):
                 moderation_status = MODERATION_STATUS_PENDING,
                 object_diff = changes,
             )
+        return self.instance
 
-        return self.instance or self._meta.model()
-
-    def save_m2m(self, *args, **kwargs):
-        pass
+    def save_m2m(self):
+        cleaned_data = self.cleaned_data
+        opts = self.instance._meta
+        fields = self.fields.keys()
+        for f in opts.many_to_many:
+            if fields and f.name not in fields:
+                continue
+            if f.name in cleaned_data:
+                f.save_form_data(self.instance, cleaned_data[f.name])
