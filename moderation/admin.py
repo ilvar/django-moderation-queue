@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core import urlresolvers
 import django
 
-from moderation.models import Changeset, MODERATION_STATUS_PENDING, MODERATION_STATUS_REJECTED, MODERATION_STATUS_APPROVED
+from moderation.models import Changeset, MODERATION_STATUS_PENDING, MODERATION_STATUS_REJECTED, MODERATION_STATUS_APPROVED, MODERATION_PENDING_LIST
 
 from django.utils.translation import ugettext as _
 from moderation.forms import BaseModeratedObjectForm
@@ -38,7 +38,7 @@ class ModerationAdmin(admin.ModelAdmin):
 
     def get_moderation_status(self, obj):
         if obj.moderation_active:
-            if obj.changeset_set.filter(moderation_status=MODERATION_STATUS_PENDING).exists():
+            if obj.changeset_set.filter(moderation_status__in=MODERATION_PENDING_LIST).exists():
                 return _('Pending')
             else:
                 return _('Aproved')
@@ -109,7 +109,7 @@ class ModeratedObjectAdmin(admin.ModelAdmin):
     def changelist_view(self, request, extra_context=None):
         if not request.GET:
             request.GET = request.GET.copy()
-            request.GET.update({'moderation_status__exact': MODERATION_STATUS_PENDING})
+            request.GET.update({'moderation_status__in': ','.join(map(str, MODERATION_PENDING_LIST))})
         return super(ModeratedObjectAdmin, self).changelist_view(request, extra_context)
 
     def change_view(self, request, object_id, extra_context=None):
@@ -124,29 +124,23 @@ class ModeratedObjectAdmin(admin.ModelAdmin):
                 reason = admin_form.cleaned_data['moderation_reason']
                 if 'approve' in request.POST:
                     changeset.approve(request.user, reason)
+                    for c in children:
+                        c.approve(request.user, reason)
+                        [c1.approve(request.user, reason) for c1 in c.get_children()]
                 elif 'reject' in request.POST:
                     changeset.reject(request.user, reason)
+                    for c in children:
+                        c.reject(request.user, reason)
+                        [c1.reject(request.user, reason) for c1 in c.get_children()]
 
-        ct = changeset.content_type
-        route = "admin:%s_%s_change" % (ct.app_label, ct.model)
-        try:
-            object_admin_url = urlresolvers.reverse(route, args=(changeset.object_pk,))
-        except urlresolvers.NoReverseMatch:
-            object_admin_url = None
+        full_diff = calculate_full_diff(changeset.content_object, changeset.object_diff)
 
-        model_klass = ct.model_class()
-        full_diff = calculate_full_diff(changeset.content_object or model_klass(), changeset.object_diff)
-
-        children_changes = []
-        for c in children:
-            children_changes.append({
-                'obj': c,
-                'diff': calculate_full_diff(c.content_object, c.object_diff)
-            })
-
-        extra_context = {'changes': full_diff,
-                         'django_version': django.get_version()[:3],
-                         'object_admin_url': object_admin_url}
+        extra_context = {
+            'changeset': changeset,
+            'changes': full_diff,
+            'children': children,
+            'django_version': django.get_version()[:3],
+        }
         return super(ModeratedObjectAdmin, self).change_view(request,
             object_id, extra_context=extra_context)
 

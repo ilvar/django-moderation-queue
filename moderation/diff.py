@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.fields import FieldDoesNotExist
 
 import re
@@ -49,14 +50,22 @@ class ImageChange(BaseChange):
                  'right_image': right_image})
 
 def calculate_full_diff(obj, diff):
+    if not obj.moderation_active:
+        obj = obj.__class__()
     for k,v in diff.items():
         try:
             field = obj._meta.get_field(k)
         except FieldDoesNotExist:
             continue
+        try:
+            obj_value = unicode(getattr(obj, k))
+        except ObjectDoesNotExist:
+            obj_value = ''
+        if not obj_value and not v:
+            continue
         yield TextChange(field.verbose_name or k,
             field,
-            (unicode(getattr(obj, k)), unicode(v)),
+            (unicode(obj_value), unicode(v)),
         )
 
 

@@ -1,7 +1,9 @@
 from django import forms
 from django.contrib.contenttypes.models import ContentType
+from django.forms.models import BaseModelFormSet, BaseInlineFormSet
 
-from moderation.models import Changeset, MODERATION_STATUS_PENDING
+from moderation.models import Changeset, MODERATION_STATUS_PENDING, MODERATION_STATUS_CREATED
+from utils.forms import ChangeLoggingFormset
 
 class MockObject():
     def save(self, *args, **kwargs):
@@ -13,7 +15,7 @@ class BaseModeratedObjectForm(forms.ModelForm):
         create = False
 
         if not self.instance or not self.instance.pk:
-            self.instance = super(BaseModeratedObjectForm, self).save(commit=commit, *args, **kwargs)
+            self.instance = super(BaseModeratedObjectForm, self).save(*args, **kwargs)
             create = True
 
         if changes or create:
@@ -22,7 +24,7 @@ class BaseModeratedObjectForm(forms.ModelForm):
                 content_type = ct,
                 object_pk = self.instance.pk,
                 changed_by=request and request.user.is_authenticated() and request.user or None,
-                moderation_status = MODERATION_STATUS_PENDING,
+                moderation_status = create and MODERATION_STATUS_CREATED or MODERATION_STATUS_PENDING,
                 object_diff = changes,
             )
         return self.instance
@@ -36,3 +38,37 @@ class BaseModeratedObjectForm(forms.ModelForm):
                 continue
             if f.name in cleaned_data:
                 f.save_form_data(self.instance, cleaned_data[f.name])
+
+class ModerationModelFormset(ChangeLoggingFormset, BaseModelFormSet):
+    def save_new(self, form, commit=True, **kwargs):
+        obj = form.save(request=self.request, commit=False, **kwargs)
+        if commit:
+            obj.save()
+        if commit and hasattr(form, 'save_m2m'):
+            form.save_m2m()
+        return obj
+
+    def save_existing(self, form, instance, commit=True):
+        """Saves and returns an existing model instance for the given form."""
+        return form.save(request=self.request, commit=commit)
+
+    def save(self, request, instance=None, commit=True):
+        if instance:
+            self.instance = instance
+        self.request = request
+        return super(ModerationModelFormset, self).save(commit=commit)
+
+class ModerationInlineFormset(ModerationModelFormset, BaseInlineFormSet):
+    def save_new(self, form, commit=True, **kwargs):
+        obj = form.save(request=self.request, commit=False, **kwargs)
+        pk_value = getattr(self.instance, self.fk.rel.field_name)
+        setattr(obj, self.fk.get_attname(), getattr(pk_value, 'pk', pk_value))
+        if commit:
+            obj.save()
+        if commit and hasattr(form, 'save_m2m'):
+            form.save_m2m()
+        return obj
+
+    def set_instance(self, instance):
+        self.instance = instance
+

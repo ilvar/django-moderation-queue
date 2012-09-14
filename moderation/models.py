@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from django.db.utils import IntegrityError
+from moderation.diff import calculate_full_diff
 
 from picklefield.fields import PickledObjectField
 
@@ -10,11 +11,15 @@ from picklefield.fields import PickledObjectField
 MODERATION_STATUS_REJECTED = 0
 MODERATION_STATUS_APPROVED = 1
 MODERATION_STATUS_PENDING = 2
+MODERATION_STATUS_CREATED = 3
+
+MODERATION_PENDING_LIST = (MODERATION_STATUS_PENDING, MODERATION_STATUS_CREATED)
 
 STATUS_CHOICES = (
     (MODERATION_STATUS_APPROVED, "Approved"),
     (MODERATION_STATUS_PENDING, "Pending"),
     (MODERATION_STATUS_REJECTED, "Rejected"),
+    (MODERATION_STATUS_CREATED, "Created"),
 )
 
 
@@ -24,7 +29,7 @@ class Changeset(models.Model):
     content_object = generic.GenericForeignKey(ct_field="content_type", fk_field="object_pk")
     date_created = models.DateTimeField(auto_now_add=True, editable=False)
 
-    moderation_status = models.SmallIntegerField(choices=STATUS_CHOICES, default=MODERATION_STATUS_PENDING, editable=False)
+    moderation_status = models.SmallIntegerField(choices=STATUS_CHOICES, default=MODERATION_STATUS_CREATED, editable=False)
     moderated_by = models.ForeignKey('auth.User', editable=False, null=True, related_name='moderated_by_set')
     moderation_date = models.DateTimeField(editable=False, blank=True, null=True)
     moderation_reason = models.TextField(blank=True, null=True)
@@ -32,9 +37,11 @@ class Changeset(models.Model):
     changed_by = models.ForeignKey('auth.User', editable=False, null=True, related_name='changed_by_set')
     object_diff = PickledObjectField(editable=False)
 
+    def get_model_name(self):
+        return self.content_type.name
+
     def get_children(self):
-        changesets = Changeset.objects.filter(moderation_status=MODERATION_STATUS_PENDING)
-        children = []
+        changesets = Changeset.objects.filter(moderation_status__in=MODERATION_PENDING_LIST)
         for cs in changesets:
             obj = cs.content_object
             if not obj:
@@ -43,6 +50,13 @@ class Changeset(models.Model):
             for f in obj._meta.fields:
                 if getattr(obj, f.name, None) == self.content_object:
                     yield cs
+
+    def get_changes_data(self):
+        return {
+            'obj': self,
+            'diff': calculate_full_diff(self.content_object, self.object_diff),
+            'children':self.get_children(),
+        }
 
     def approve(self, user, reason):
         try:

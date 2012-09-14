@@ -1,16 +1,16 @@
 {% spaceless %}
 {% for operation in diff_operations %}
 	{% ifequal operation.operation "replace" %}
-		<del class="diff modified">{{ operation.deleted }}</del>
-		<ins class="diff modified">{{ operation.inserted }}</ins>
+		<del class="diff modified">{{ operation.deleted|default:"" }}</del>
+		<ins class="diff modified">{{ operation.inserted|default:"" }}</ins>
 	{% endifequal %}
 	
 	{% ifequal operation.operation "delete" %}
-		<del class="diff">{{ operation.deleted }}</del>
+		<del class="diff">{{ operation.deleted|default:"" }}</del>
 	{% endifequal %}
 	
 	{% ifequal operation.operation "insert" %}
-		<ins class="diff">{{ operation.inserted }}</ins>
+		<ins class="diff">{{ operation.inserted|default:"" }}</ins>
 	{% endifequal %}
 	
 	{% ifequal operation.operation "equal" %}

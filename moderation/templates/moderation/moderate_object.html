@@ -23,11 +23,6 @@
 {% endblock %}
 
 {% block object-tools %}
-    {% if object_admin_url %}
-        <ul class="object-tools">
-            <li><a href="{{ object_admin_url }}" class="historylink">{% trans "Change object" %}</a></li>
-        </ul>
-    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -36,18 +31,67 @@
 
         <div>
             <fieldset class="module aligned ">
-                <h2>Object differences</h2>
+            <table border="0">
+                <tr>
+                    <td colspan="3">
+                        <h2>{{ changeset.get_model_name }}: {{ changeset.content_object }}</h2>
+                    </td>
+                </tr>
 
                 {% for change in changes %}
-                    <div class="form-row">
-                        <div>
+                    <tr class="form-row">
+                        <td>
                             <label style="font-size: 14px; font-weight: bold;">{{ change.verbose_name }}</label>
+                        </td>
 
+                        <td>
                             <p style="width:800px;">{{ change.diff|safe }}</p>
-                        </div>
+                        </td>
 
-                    </div>
+                    </tr>
                 {% endfor %}
+
+                {% for child in children %}
+                    <tr>
+                        <td colspan="3">
+                            <h2>{{ child.get_model_name }}: {{ child.content_object }}</h2>
+                        </td>
+                    </tr>
+
+                    {% for change in child.get_changes_data.diff %}
+                        <tr class="form-row">
+                            <td>
+                                <label style="font-size: 14px; font-weight: bold;">{{ change.verbose_name }}</label>
+                            </td>
+
+                            <td>
+                                <p style="width:800px;">{{ change.diff|safe }}</p>
+                            </td>
+
+                        </tr>
+                    {% endfor %}
+                    {% for child1 in child.get_children %}
+                        <tr>
+                            <td colspan="3">
+                                <h2>{{ child1.get_model_name }}: {{ child1.content_object }}</h2>
+                            </td>
+                        </tr>
+
+                        {% for change in child1.get_changes_data.diff %}
+                            <tr class="form-row">
+                                <td>
+                                    <label style="font-size: 14px; font-weight: bold;">{{ change.verbose_name }}</label>
+                                </td>
+
+                                <td>
+                                    <p style="width:800px;">{{ change.diff|safe }}</p>
+                                </td>
+
+                            </tr>
+                        {% endfor %}
+                    {% endfor %}
+                {% endfor %}
+            </table>
             </fieldset>
 
             {% for fieldset in adminform %}
