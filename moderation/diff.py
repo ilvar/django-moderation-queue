@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.fields import FieldDoesNotExist
+from django.db.models.query import QuerySet
 
 import re
 import difflib
 
 from django.db.models import fields
 from django.utils.html import escape
-
 
 class BaseChange(object):
 
@@ -50,22 +50,28 @@ class ImageChange(BaseChange):
                  'right_image': right_image})
 
 def calculate_full_diff(obj, diff):
-    if not obj.moderation_active:
-        obj = obj.__class__()
+    obj_value = u''
     for k,v in diff.items():
         try:
             field = obj._meta.get_field(k)
         except FieldDoesNotExist:
             continue
-        try:
-            obj_value = unicode(getattr(obj, k))
-        except ObjectDoesNotExist:
-            obj_value = ''
+        if obj.moderation_active:
+            try:
+                obj_value = unicode(getattr(obj, k))
+            except ObjectDoesNotExist:
+                obj_value = u''
+
+        if isinstance(v, QuerySet):
+            diff_value = u', '.join(map(unicode, v))
+        else:
+            diff_value = unicode(v)
+
         if not obj_value and not v:
             continue
         yield TextChange(field.verbose_name or k,
             field,
-            (unicode(obj_value), unicode(v)),
+            (unicode(obj_value), diff_value),
         )
 
 
