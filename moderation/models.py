@@ -93,6 +93,9 @@ class Changeset(models.Model):
             if isinstance(field, FileBrowseField):
                 v = FileObject(v, site=field.site)
 
+            if hasattr(field, 'rel') and isinstance(v, int):
+                v = field.rel.to(pk=v)
+
             update_params[k] = v
 
         update_params.update(moderation_active=True)

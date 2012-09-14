@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.forms.models import BaseModelFormSet, BaseInlineFormSet
+from django.db import models
 
 from moderation.models import Changeset, MODERATION_STATUS_PENDING, MODERATION_STATUS_CREATED
 from utils.forms import ChangeLoggingFormset
@@ -11,7 +12,12 @@ class MockObject():
 
 class BaseModeratedObjectForm(forms.ModelForm):
     def save(self, request, commit=True, *args, **kwargs):
-        changes = dict([(k, v) for k, v in self.cleaned_data.items() if k in self.changed_data])
+        changes = {}
+        for k, v in self.cleaned_data.items():
+            if isinstance(v, models.Model):
+                changes[k] = v.pk
+            else:
+                changes[k] = v
         create = False
 
         if not self.instance or not self.instance.pk:
