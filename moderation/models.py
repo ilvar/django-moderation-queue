@@ -91,7 +91,7 @@ class Changeset(models.Model):
                 continue
 
             if v is None:
-                if not field.null and not field.blank:
+                if not field.null or not field.blank:
                     continue
 
             if isinstance(field, FileBrowseField):
