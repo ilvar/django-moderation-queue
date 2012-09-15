@@ -59,17 +59,14 @@ class Changeset(models.Model):
         }
 
     def approve(self, user, reason):
-        try:
-            self.apply_changes()
-        except IntegrityError, e:
-            print 'Error on changeset %s:' % self.pk, e
-        else:
-            self.moderation_status = MODERATION_STATUS_APPROVED
-            self.moderated_by = user
-            self.moderation_date = datetime.datetime.now()
-            self.moderation_reason = reason
+        self.apply_changes()
 
-            self.save()
+        self.moderation_status = MODERATION_STATUS_APPROVED
+        self.moderated_by = user
+        self.moderation_date = datetime.datetime.now()
+        self.moderation_reason = reason
+
+        self.save()
 
     def reject(self, user, reason):
         self.moderation_status = MODERATION_STATUS_REJECTED
@@ -89,6 +86,13 @@ class Changeset(models.Model):
             field = obj_fields.get(k)
             if not field:
                 continue
+
+            if not field.editable:
+                continue
+
+            if not v:
+                if not field.null and not field.blank:
+                    continue
 
             if isinstance(field, FileBrowseField):
                 v = FileObject(v, site=field.site)
