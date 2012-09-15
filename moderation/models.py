@@ -79,6 +79,9 @@ class Changeset(models.Model):
         from filebrowser.fields import FileBrowseField
         from filebrowser.base import FileObject
 
+        if not self.object_pk:
+            return
+
         Model = self.content_type.model_class()
         obj_fields = dict([(f[0].name, f[0]) for f in Model()._meta.get_fields_with_model()])
         update_params = {}
