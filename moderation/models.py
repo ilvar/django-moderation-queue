@@ -90,7 +90,7 @@ class Changeset(models.Model):
             if not field.editable:
                 continue
 
-            if not v:
+            if v is None:
                 if not field.null and not field.blank:
                     continue
 
