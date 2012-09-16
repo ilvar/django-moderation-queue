@@ -11,6 +11,19 @@ class MockObject():
     def save(self, *args, **kwargs):
         pass
 
+def put_on_moderation(obj, data, user, create):
+    ct = ContentType.objects.get_for_model(obj)
+    changeset = Changeset.objects.create(
+        content_type = ct,
+        object_pk = obj.pk,
+        changed_by=user,
+        moderation_status = create and MODERATION_STATUS_CREATED or MODERATION_STATUS_PENDING,
+        object_diff = data,
+    )
+
+    if getattr(settings, 'MODERATION_SKIP', False):
+        changeset.approve(user, 'Auto')
+
 class BaseModeratedObjectForm(forms.ModelForm):
     def save(self, request, commit=True, *args, **kwargs):
         changes = {}
@@ -26,18 +39,8 @@ class BaseModeratedObjectForm(forms.ModelForm):
             create = True
 
         if changes or create:
-            ct = ContentType.objects.get_for_model(self.instance)
             user = request and request.user.is_authenticated() and request.user or None
-            changeset = Changeset.objects.create(
-                content_type = ct,
-                object_pk = self.instance.pk,
-                changed_by=user,
-                moderation_status = create and MODERATION_STATUS_CREATED or MODERATION_STATUS_PENDING,
-                object_diff = changes,
-            )
-
-            if getattr(settings, 'MODERATION_SKIP', False):
-                changeset.approve(user, 'Auto')
+            put_on_moderation(self.instance, data=changes, user=user, create=create)
         return self.instance
 
     def save_m2m(self):
