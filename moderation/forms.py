@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.forms.models import BaseModelFormSet, BaseInlineFormSet
 from django.db import models
@@ -26,13 +27,17 @@ class BaseModeratedObjectForm(forms.ModelForm):
 
         if changes or create:
             ct = ContentType.objects.get_for_model(self.instance)
-            Changeset.objects.create(
+            user = request and request.user.is_authenticated() and request.user or None
+            changeset = Changeset.objects.create(
                 content_type = ct,
                 object_pk = self.instance.pk,
-                changed_by=request and request.user.is_authenticated() and request.user or None,
+                changed_by=user,
                 moderation_status = create and MODERATION_STATUS_CREATED or MODERATION_STATUS_PENDING,
                 object_diff = changes,
             )
+
+            if getattr(settings, 'MODERATION_SKIP', False):
+                changeset.approve(user, 'Auto')
         return self.instance
 
     def save_m2m(self):
