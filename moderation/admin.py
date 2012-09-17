@@ -3,6 +3,7 @@ from django.forms.models import ModelForm
 from django.contrib.contenttypes.models import ContentType
 from django.core import urlresolvers
 import django
+from django.shortcuts import redirect
 
 from moderation.models import Changeset, MODERATION_STATUS_PENDING, MODERATION_STATUS_REJECTED, MODERATION_STATUS_APPROVED, MODERATION_PENDING_LIST
 
@@ -114,6 +115,16 @@ class ModeratedObjectAdmin(admin.ModelAdmin):
 
     def change_view(self, request, object_id, extra_context=None):
         changeset = Changeset.objects.get(pk=object_id)
+
+        if not changeset.object_pk:
+            changeset.delete()
+            messages.error(request, _(u'Object ID not present, changeset is invalid and is deleted'))
+            return redirect('..')
+
+        if not changeset.content_object:
+            changeset.delete()
+            messages.error(request, _(u'Object had been deleted, changeset is invalid and is deleted'))
+            return redirect('..')
 
         children = changeset.get_children()
 
