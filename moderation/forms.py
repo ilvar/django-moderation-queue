@@ -23,15 +23,17 @@ def put_on_moderation(obj, data, user, create):
 
     if getattr(settings, 'MODERATION_SKIP', False):
         changeset.approve(user, 'Auto')
+        obj.moderation_active = True
 
 class BaseModeratedObjectForm(forms.ModelForm):
     def save(self, request, commit=True, *args, **kwargs):
         changes = {}
         for k, v in self.cleaned_data.items():
-            if isinstance(v, models.Model):
-                changes[k] = v.pk
-            else:
-                changes[k] = v
+            if k in self.changed_data:
+                if isinstance(v, models.Model):
+                    changes[k] = v.pk
+                else:
+                    changes[k] = v
         create = False
 
         if not self.instance or not self.instance.pk:
