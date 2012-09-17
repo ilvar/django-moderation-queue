@@ -14,14 +14,16 @@ from moderation.diff import get_changes_between_models, calculate_full_diff
 
 def approve_objects(modeladmin, request, queryset):
     for obj in queryset:
-        obj.approve(user=request.user, reason='')
+        if obj.object_pk and obj.content_object:
+            obj.approve(user=request.user, reason='')
 
 approve_objects.short_description = "Approve selected moderated objects"
 
 
 def reject_objects(modeladmin, request, queryset):
     for obj in queryset:
-        obj.reject(user=request.user, reason='')
+        if obj.object_pk and obj.content_object:
+            obj.reject(user=request.user, reason='')
 
 reject_objects.short_description = "Reject selected moderated objects"
 
