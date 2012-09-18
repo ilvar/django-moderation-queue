@@ -87,9 +87,6 @@ class Changeset(models.Model):
         self.save()
 
     def apply_changes(self):
-        from filebrowser.fields import FileBrowseField
-        from filebrowser.base import FileObject
-
         if not self.object_pk:
             return
 
@@ -108,8 +105,13 @@ class Changeset(models.Model):
                 if not field.null or not field.blank:
                     continue
 
-            if isinstance(field, FileBrowseField):
+            if 'FileBrowseField' in type(field).__name__:
+                from filebrowser.base import FileObject
                 v = FileObject(v, site=field.site)
+
+            if 'TagField' in type(field).__name__:
+                from tagging.models import Tag
+                Tag.objects.update_tags(self.content_object, v)
 
             if getattr(field, 'rel', None) and isinstance(v, int):
                 v = field.rel.to(pk=v)
