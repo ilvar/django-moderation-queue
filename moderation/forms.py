@@ -21,7 +21,10 @@ def put_on_moderation(obj, data, user, create):
         object_diff = data,
     )
 
-    if getattr(settings, 'MODERATION_SKIP', False):
+    MODERATION_SKIP = getattr(settings, 'MODERATION_SKIP', False)
+    SUPERUSER_MODERATION_SKIP = getattr(settings, 'SUPERUSER_MODERATION_SKIP', True)
+
+    if MODERATION_SKIP or (user.is_superuser() and SUPERUSER_MODERATION_SKIP):
         changeset.approve(user, 'Auto')
         obj.moderation_active = True
 
