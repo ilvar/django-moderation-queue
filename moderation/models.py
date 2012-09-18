@@ -58,6 +58,15 @@ class Changeset(models.Model):
             'children':self.get_children(),
         }
 
+    def get_content_type_name(self):
+        return self.content_object._meta.verbose_name
+
+    def get_content_type_name_plural(self):
+        return self.content_object._meta.verbose_name_plural
+
+    def is_creation(self):
+        return Changeset.objects.filter(content_type=self.content_type, object_pk=self.object_pk, pk__lt=self.pk).exists()
+
     def approve(self, user, reason):
         self.apply_changes()
 
