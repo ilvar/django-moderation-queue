@@ -64,6 +64,7 @@ class Changeset(models.Model):
     def get_content_type_name_plural(self):
         return self.content_object._meta.verbose_name_plural
 
+    @property
     def is_creation(self):
         return Changeset.objects.filter(content_type=self.content_type, object_pk=self.object_pk, pk__lt=self.pk).exists()
 
