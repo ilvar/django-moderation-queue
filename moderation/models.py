@@ -66,7 +66,8 @@ class Changeset(models.Model):
 
     @property
     def is_creation(self):
-        return Changeset.objects.filter(content_type=self.content_type, object_pk=self.object_pk, pk__lt=self.pk).exists()
+        old_cs = Changeset.objects.filter(content_type=self.content_type, object_pk=self.object_pk, pk__lt=self.pk)
+        return not old_cs.exists()
 
     def approve(self, user, reason):
         self.apply_changes()
