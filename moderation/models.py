@@ -1,4 +1,5 @@
 import datetime
+from django.conf import settings
 from django.db import models
 from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
@@ -106,8 +107,9 @@ class Changeset(models.Model):
                     continue
 
             if 'FileBrowseField' in type(field).__name__:
-                from filebrowser.base import FileObject
-                v = FileObject(v, site=field.site)
+                from filebrowser.fields import FileObject
+                v = FileObject(u'%s%s' % (settings.FILEBROWSER_DIRECTORY, v))
+                print 'FileBrowseField', v, getattr(self.content_object, k)
 
             if 'TagField' in type(field).__name__:
                 from tagging.models import Tag
