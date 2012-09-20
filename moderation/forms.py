@@ -40,7 +40,7 @@ class BaseModeratedObjectForm(forms.ModelForm):
         create = False
 
         if not self.instance or not self.instance.pk:
-            self.instance = super(BaseModeratedObjectForm, self).save(*args, **kwargs)
+            self.instance = super(BaseModeratedObjectForm, self).save(commit=True, *args, **kwargs)
             create = True
 
         if changes or create:
@@ -82,6 +82,7 @@ class ModerationInlineFormset(ModerationModelFormset, BaseInlineFormSet):
         obj = form.save(request=self.request, commit=False, **kwargs)
         pk_value = getattr(self.instance, self.fk.rel.field_name)
         setattr(obj, self.fk.get_attname(), getattr(pk_value, 'pk', pk_value))
+
         if commit:
             obj.save()
         if commit and hasattr(form, 'save_m2m'):

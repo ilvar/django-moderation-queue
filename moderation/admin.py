@@ -1,5 +1,5 @@
 from django.contrib import admin, messages
-from django.forms.models import ModelForm
+from django.forms.models import ModelForm, modelform_factory
 from django.contrib.contenttypes.models import ContentType
 from django.core import urlresolvers
 import django
@@ -53,7 +53,14 @@ class ModerationAdmin(admin.ModelAdmin):
         return self.model.all_objects.all()
 
     def get_form(self, request, obj=None):
-        return self.get_moderated_object_form(self.model)
+        if self.form:
+            if self.form.__name__ != 'AdminModeratedForm':
+                class AdminModeratedForm(BaseModeratedObjectForm, self.form):
+                    pass
+                self.form = AdminModeratedForm
+        else:
+            self.form = BaseModeratedObjectForm
+        return super(ModerationAdmin, self).get_form(request, obj)
 
     def save_form(self, request, form, change):
         obj = form.save(request=request)
@@ -62,12 +69,6 @@ class ModerationAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         return obj
-
-    def get_moderated_object_form(self, model_class):
-        class ModeratedObjectForm(BaseModeratedObjectForm):
-            class Meta:
-                model = model_class
-        return ModeratedObjectForm
 
     def add_view(self, request, *args, **kwargs):
         self.inlines = []

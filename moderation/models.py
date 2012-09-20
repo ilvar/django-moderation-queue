@@ -109,7 +109,6 @@ class Changeset(models.Model):
             if 'FileBrowseField' in type(field).__name__:
                 from filebrowser.fields import FileObject
                 v = FileObject(u'%s%s' % (settings.FILEBROWSER_DIRECTORY, v))
-                print 'FileBrowseField', v, getattr(self.content_object, k)
 
             if 'TagField' in type(field).__name__:
                 from tagging.models import Tag
