@@ -54,7 +54,7 @@ class ModerationAdmin(admin.ModelAdmin):
 
     def get_form(self, request, obj=None):
         if self.form:
-            if isinstance(self.form, BaseModeratedObjectForm):
+            if BaseModeratedObjectForm in self.form.mro():
                 pass
             elif self.form.__name__ != 'AdminModeratedForm':
                 class AdminModeratedForm(BaseModeratedObjectForm, self.form):
