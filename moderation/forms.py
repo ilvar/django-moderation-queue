@@ -1,6 +1,7 @@
 from django import forms
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.files.base import File
 from django.forms.models import BaseModelFormSet, BaseInlineFormSet
 from django.db import models
 
@@ -35,6 +36,10 @@ class BaseModeratedObjectForm(forms.ModelForm):
             if k in self.changed_data:
                 if isinstance(v, models.Model):
                     changes[k] = v.pk
+                elif isinstance(v, File):
+                    fake_instance = self._meta.model()
+                    getattr(fake_instance, k).save(v.name, v, save=False)
+                    changes[k] = getattr(fake_instance, k).name
                 else:
                     changes[k] = v
         create = False
