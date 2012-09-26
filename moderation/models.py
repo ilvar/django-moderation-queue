@@ -7,6 +7,7 @@ from django.db.utils import IntegrityError
 from moderation.diff import calculate_full_diff
 
 from picklefield.fields import PickledObjectField
+from tagging.utils import parse_tag_input
 
 
 MODERATION_STATUS_REJECTED = 0
@@ -112,7 +113,16 @@ class Changeset(models.Model):
 
             if 'TagField' in type(field).__name__:
                 from tagging.models import Tag
-                Tag.objects.update_tags(self.content_object, v)
+                tags = parse_tag_input(v)
+                lower_tags = []
+                real_tags = []
+                for t in tags:
+                    if not t.lower() in lower_tags:
+                        lower_tags.append(t.lower())
+                        real_tags.append(t)
+                real_tags_str = ', '.join('"%s"' % t for t in real_tags)
+                print 'real_tags_str', real_tags_str
+                Tag.objects.update_tags(self.content_object, real_tags_str)
 
             if getattr(field, 'rel', None) and isinstance(v, int):
                 v = field.rel.to(pk=v)
