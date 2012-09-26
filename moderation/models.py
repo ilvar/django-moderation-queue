@@ -121,7 +121,6 @@ class Changeset(models.Model):
                         lower_tags.append(t.lower())
                         real_tags.append(t)
                 real_tags_str = ', '.join('"%s"' % t for t in real_tags)
-                print 'real_tags_str', real_tags_str
                 Tag.objects.update_tags(self.content_object, real_tags_str)
 
             if getattr(field, 'rel', None) and isinstance(v, int):
