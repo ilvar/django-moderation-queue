@@ -95,7 +95,7 @@ class Changeset(models.Model):
         Model = self.content_type.model_class()
         obj_fields = dict([(f[0].name, f[0]) for f in Model()._meta.get_fields_with_model()])
         update_params = {}
-        for k,v in self.object_diff.items():
+        for k,v in nicheself.object_diff.items():
             field = obj_fields.get(k)
             if not field:
                 continue
