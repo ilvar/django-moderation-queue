@@ -40,6 +40,7 @@ class BaseModeratedObjectForm(forms.ModelForm):
                     fake_instance = self._meta.model()
                     getattr(fake_instance, k).save(v.name, v, save=False)
                     changes[k] = getattr(fake_instance, k).name
+                    v.open()
                 else:
                     changes[k] = v
         create = False
