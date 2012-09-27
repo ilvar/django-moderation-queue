@@ -73,15 +73,11 @@ class ModerationAdmin(admin.ModelAdmin):
         return obj
 
     def add_view(self, request, *args, **kwargs):
-        self.real_inlines = self.inlines
-        self.inlines = []
         if "_continue" in request.POST:
             request.POST = request.POST.copy()
             del request.POST["_continue"]
 
-        result = super(ModerationAdmin, self).add_view(request, *args, **kwargs)
-        self.inlines = self.real_inlines
-        return result
+        return super(ModerationAdmin, self).add_view(request, *args, **kwargs)
 
 available_filters = ('content_type', 'moderation_status')
 
