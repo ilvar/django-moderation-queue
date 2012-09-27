@@ -1,7 +1,7 @@
 from django import forms
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.files.base import File
+from django.core.files.base import File, ContentFile
 from django.forms.models import BaseModelFormSet, BaseInlineFormSet
 from django.db import models
 
@@ -31,23 +31,26 @@ def put_on_moderation(obj, data, user, create):
 
 class BaseModeratedObjectForm(forms.ModelForm):
     def save(self, request, commit=True, *args, **kwargs):
+        create = False
+
+        if not self.instance or not self.instance.pk:
+            self.instance = super(BaseModeratedObjectForm, self).save(commit=True, *args, **kwargs)
+            create = True
+
         changes = {}
         for k, v in self.cleaned_data.items():
             if k in self.changed_data:
                 if isinstance(v, models.Model):
                     changes[k] = v.pk
                 elif isinstance(v, File):
-                    fake_instance = self._meta.model()
-                    getattr(fake_instance, k).save(v.name, v, save=False)
-                    changes[k] = getattr(fake_instance, k).name
-                    v.open()
+                    if create:
+                        changes[k] = getattr(self.instance, k).name
+                    else:
+                        fake_instance = self._meta.model()
+                        getattr(fake_instance, k).save(v.name, v, save=False)
+                        changes[k] = getattr(fake_instance, k).name
                 else:
                     changes[k] = v
-        create = False
-
-        if not self.instance or not self.instance.pk:
-            self.instance = super(BaseModeratedObjectForm, self).save(commit=True, *args, **kwargs)
-            create = True
 
         if changes or create:
             user = request and request.user.is_authenticated() and request.user or None
