@@ -34,9 +34,8 @@ class BaseModeratedObjectForm(forms.ModelForm):
         create = False
 
         if not self.instance or not self.instance.pk:
-            if commit:
-                self.instance = super(BaseModeratedObjectForm, self).save(commit=True, *args, **kwargs)
-                create = True
+            self.instance = super(BaseModeratedObjectForm, self).save(commit=True, *args, **kwargs)
+            create = True
 
         changes = {}
         for k, v in self.cleaned_data.items():
