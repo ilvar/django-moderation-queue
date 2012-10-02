@@ -1,4 +1,5 @@
 import datetime
+import random
 from django.conf import settings
 from django.db import models
 from django.contrib.contenttypes import generic
@@ -130,6 +131,15 @@ class Changeset(models.Model):
 
         update_params.update(moderation_active=True)
         update_qs = Model.all_objects.filter(pk=self.object_pk)
+
+        if 'slug' in update_params:
+            siblings = Model.all_objects.exclude(pk=self.pk)
+            update_params['slug'] = update_params['slug'][:50]
+            while siblings.filter(slug=update_params['slug']).exists():
+                update_params['slug'] += '_%s' % random.randint(10, 99)
+                update_params['slug'] = update_params['slug'][-50:]
+            update_params['slug'] = update_params['slug'][:50]
+        
         update_qs.update(**update_params)
 
 class ModeratedManager(models.Manager):
