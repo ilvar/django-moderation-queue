@@ -62,10 +62,10 @@ class Changeset(models.Model):
         }
 
     def get_content_type_name(self):
-        return self.content_object._meta.verbose_name
+        return self.content_object and self.content_object._meta.verbose_name
 
     def get_content_type_name_plural(self):
-        return self.content_object._meta.verbose_name_plural
+        return self.content_object and self.content_object._meta.verbose_name_plural
 
     @property
     def is_creation(self):
