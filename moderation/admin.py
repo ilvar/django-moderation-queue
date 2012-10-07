@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin, messages
 from django.forms.models import ModelForm, modelform_factory
 from django.contrib.contenttypes.models import ContentType
@@ -65,8 +66,14 @@ class ModerationAdmin(admin.ModelAdmin):
         return super(ModerationAdmin, self).get_form(request, obj)
 
     def save_form(self, request, form, change):
-        obj = form.save(request=request)
-        messages.success(request, _(u"Object is not viewable on site, it will be visible if moderator accepts it"))
+        MODERATION_SKIP = getattr(settings, 'MODERATION_SKIP', False)
+        SUPERUSER_MODERATION_SKIP = getattr(settings, 'SUPERUSER_MODERATION_SKIP', True)
+
+        if SUPERUSER_MODERATION_SKIP or MODERATION_SKIP:
+            obj = form.save(request=request, skip_moderation=True)
+        else:
+            obj = form.save(request=request)
+            messages.success(request, _(u"Object is not viewable on site, it will be visible if moderator accepts it"))
         return obj
 
     def save_model(self, request, obj, form, change):

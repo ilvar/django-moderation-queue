@@ -30,7 +30,14 @@ def put_on_moderation(obj, data, user, create):
         obj.moderation_active = True
 
 class BaseModeratedObjectForm(forms.ModelForm):
-    def save(self, request, commit=True, *args, **kwargs):
+    def save(self, request, commit=True, skip_moderation=False, *args, **kwargs):
+        if skip_moderation:
+            obj = super(BaseModeratedObjectForm, self).save(commit=False, *args, **kwargs)
+            obj.moderation_active=True
+            if commit:
+                obj.save()
+            return obj
+
         create = False
 
         if not self.instance or not self.instance.pk:
